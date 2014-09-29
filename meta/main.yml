@@ -1,0 +1,8 @@
+---
+dependencies: 
+ - { role: epel-repo }
+ - { role: redis }
+ - { role: git }
+ - { role: ruby }
+ - { role: apache }
+ - { role: mysql, mysql_db: "{{ gitlab_mysql_db }}", mysql_users: "{{ gitlab_mysql_user }}"}

@@ -1,0 +1,126 @@
+---
+- name: install the 'Development tools' package group
+  yum: name="@Development tools" state=present
+
+- name: Install required tools for GitLab
+  yum: name={{ item }} state=installed
+  with_items:
+  - readline
+  - readline-devel
+  - ncurses-devel 
+  - gdbm-devel 
+  - glibc-devel 
+  - tcl-devel 
+  - openssl-devel 
+  - curl-devel 
+  - expat-devel 
+  - db4-devel 
+  - byacc 
+  - sqlite-devel 
+  - libyaml 
+  - libyaml-devel 
+  - libffi 
+  - libffi-devel 
+  - libxml2
+  - libxml2-devel 
+  - libxslt 
+  - libxslt-devel 
+  - libicu 
+  - libicu-devel 
+  - system-config-firewall-tui 
+  - sudo 
+  - wget 
+  - crontabs 
+  - logwatch 
+  - logrotate 
+  - perl-Time-HiRes
+  - python-docutils
+  - postfix
+  - cmake
+  - mysql-devel
+
+- name: install bundler gem
+  gem: name=bundler state=latest user_install=no
+  tags: debug
+
+- name: create GitLab user
+  user: name={{ gitlab_user }} comment="GitLab User" state=present createhome=yes shell=/bin/bash system=yes
+
+- name: Add /usr/local/bin to path
+  lineinfile: dest=/etc/sudoers state=present backrefs=yes regexp="Defaults(\s)+secure_path(\s)+=(.*)" line="Defaults\1secure_path\2=\3:/usr/local/bin"
+
+- name: clone gitlab repository
+  git: repo={{ gitlab_repo }} dest=/home/{{ gitlab_user }}/gitlab version={{ gitlab_branch }}
+
+- name: change the permissions of /home/{{ gitlab_user }}
+  file: path=/home/{{ gitlab_user }} owner=git group=git state=directory recurse=yes
+
+- name: copy gitlab.yml file
+  template: src=gitlab.yml.j2 dest=/home/{{ gitlab_user }}/gitlab/config/gitlab.yml owner=git 
+
+- name: Give git permissions of its logs
+  file: path=/home/{{ gitlab_user }}/log owner=git state=directory recurse=yes mode=2700
+
+- name: Give git permissions of its temp directory
+  file: path=/home/{{ gitlab_user }}/tmp owner=git state=directory recurse=yes mode=0775
+
+- name: Give git permissions of its pids directory
+  file: path=/home/{{ gitlab_user }}/tmp/pids owner=git state=directory recurse=yes mode=0700
+
+- name: Give git permissions of its sockets directory
+  file: path=/home/{{ gitlab_user }}/tmp/sockets owner=git state=directory recurse=yes mode=0775
+
+- name: Give git permissions of its uploads directory
+  file: path=/home/{{ gitlab_user }}/public/uploads owner=git state=directory recurse=yes mode=0700
+
+- name: Give git permissions of its satellites directory
+  file: path=/home/{{ gitlab_user }}/gitlab-satellites owner=git state=directory recurse=yes mode=0750
+
+- name: copy unicorn config
+  template: src=unicorn.rb.j2 dest=/home/{{ gitlab_user }}/gitlab/config/unicorn.rb owner=git
+
+- name: copy rack attack config
+  template: src=rack_attack.rb.j2 dest=/home/{{ gitlab_user }}/gitlab/config/initializers/rack_attack.rb owner=git
+
+- name: copy .gitconfig file for GitLab user 
+  template: src=.gitconfig dest=/home/{{ gitlab_user }}/.gitconfig owner={{ gitlab_user }} 
+
+- name: copy database.yml file
+  template: src=database.yml.j2 dest=/home/{{ gitlab_user }}/gitlab/config/database.yml owner=git mode=0600
+
+- name: bundle install GitLab gems
+  command: sudo -u git -H bundle install --deployment --without development test postgres aws chdir=/home/{{ gitlab_user }}/gitlab
+
+- name: Install gitlab-shell
+  command: sudo -u git -H bundle exec rake gitlab:shell:install[{{ gitlab_shell_version}}] REDIS_URL=redis://localhost:6379 RAILS_ENV=production chdir=/home/{{ gitlab_user }}/gitlab
+
+- name: copy gitlab-shell config.yml file
+  template: src=gitlab-shell-config.yml.j2 dest=/home/{{ gitlab_user }}/gitlab-shell/config.yml owner=git 
+
+- name: gitlab setup
+  shell: yes "yes" | sudo -u git -H bundle exec rake gitlab:setup RAILS_ENV=production chdir=/home/{{ gitlab_user }}/gitlab && touch /home/{{ gitlab_user }}/gitlab/.ansible_ran_gitlab_setup creates=/home/{{ gitlab_user }}/gitlab/.ansible_ran_gitlab_setup
+
+- name: download gitlab init script
+  get_url: url={{ gitlab_init_script }} dest=/etc/init.d/gitlab owner=root mode=0755
+
+- name: add gitlab to chkconfig
+  command: /sbin/chkconfig --add gitlab 
+
+- name: turn gitlab on in chkconfig
+  command: /sbin/chkconfig gitlab on
+
+- name: copy logrotate config
+  command: creates=/etc/logrotate.d/gitlab  cp /home/{{ gitlab_user }}/gitlab/lib/support/logrotate/gitlab /etc/logrotate.d/gitlab
+
+- name: Give root permission to logrotate
+  file: path=/etc/logrotate.d/gitlab owner=root state=file
+
+- name: gitlab setup
+  shell: yes "yes" | sudo -u git -H bundle exec rake gitlab:setup RAILS_ENV=production chdir=/home/{{ gitlab_user }}/gitlab && touch /home/{{ gitlab_user }}/gitlab/.ansible_ran_assets_precompile creates=/home/{{ gitlab_user }}/gitlab/.ansible_ran_assets_precompile
+
+- name: start gitlab service
+  service: name=gitlab state=started enabled=yes
+
+- name: copy gitlab.conf file
+  template: src=gitlab.conf.j2 dest=/etc/httpd/conf.d/gitlab.conf
+  notify: restart httpd

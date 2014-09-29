@@ -1,0 +1,10 @@
+production:
+  adapter: mysql2
+  encoding: utf8
+  reconnect: false
+  database: gitlabhq_production
+  pool: 10
+  username: {{ gitlab_mysql_user.0.name }}
+  password: {{ lookup('file','/tmp/passwords/'+ansible_hostname+'/mysql/git') }}
+  host: {{ gitlab_db_host }}
+  # socket: /tmp/mysql.sock

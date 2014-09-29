@@ -1,0 +1,12 @@
+---
+- name: gitlab-start
+  service: name=gitlab start=started
+  sudo: True
+
+- name: gitlab-restart
+  service: name=gitlab state=restarted
+  sudo: True
+
+- name: gitlab-reload
+  service: name=gitlab state=reloaded
+  sudo: True
