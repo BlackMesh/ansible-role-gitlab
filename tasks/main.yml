@@ -41,7 +41,6 @@
 
 - name: install bundler gem
   gem: name=bundler state=latest user_install=no
-  tags: debug
 
 - name: create GitLab user
   user: name={{ gitlab_user }} comment="GitLab User" state=present createhome=yes shell=/bin/bash system=yes
@@ -121,6 +120,33 @@
 - name: start gitlab service
   service: name=gitlab state=started enabled=yes
 
+- name: Setup a CA
+  ca: certdir="/etc/httpd/cert_tmp" subj="{{ gitlab_SSL_subject }}/CN=CA/"
+
+- name: Create a Server Cert
+  certificate: cadir="/etc/httpd/cert_tmp" hostname={{ ansible_fqdn }} subj="{{ gitlab_SSL_subject }}/CN={{ ansible_fqdn }}/" p12password="bmesh{{ ansible_fqdn }}"
+
+- name: Create a Client Cert
+  certificate: cadir="/etc/httpd/cert_tmp" hostname={{ gitlab_host }} subj="{{ gitlab_SSL_subject }}/CN={{ gitlab_host }}/" p12password="bmesh{{ gitlab_host }}" certtype="client"
+
+- name: Make sure ssl directory exists
+  file: path=/etc/httpd/ssl.crt state=directory
+
+- name: Make sure the ssl directory exists
+  file: path=/etc/httpd/ssl.key state=directory
+
+- name: Put SSLCACertificateFile in correct spot
+  command: cp -fb /etc/httpd/cert_tmp/client/{{ gitlab_host }}.keycert.pem /etc/httpd/ssl.crt/{{ gitlab_host }}-ca.crt
+
+- name: Put SSLCertificateFile in correct spot
+  command: cp -fb /etc/httpd/cert_tmp/client/{{ gitlab_host }}.cert.pem /etc/httpd/ssl.crt/{{ gitlab_host }}.crt
+
+- name: Put SSLCertificateKeyFile in correct spot
+  command: cp -fb /etc/httpd/cert_tmp/client/{{ gitlab_host }}.key.pem /etc/httpd/ssl.key/{{ gitlab_host }}.key
+
+- name: Remove CA
+  ca: certdir="/etc/httpd/cert_tmp" subj="/CN=whatever/" state="absent"
+
 - name: copy gitlab.conf file
   template: src=gitlab.conf.j2 dest=/etc/httpd/conf.d/gitlab.conf
-  notify: restart httpd
+  notify: restart apache
