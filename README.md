@@ -18,6 +18,7 @@ None.
       gitlab_host: gitlab.localhost
       gitlab_https: "false"
       gitlab_init_script: https://raw.github.com/gitlabhq/gitlab-recipes/master/init/sysvinit/centos/gitlab-unicorn
+      gitlab_SSL_subject: /C=US/ST=yourstate/L=yourcity/O=yourorganization
     
       gitlab_mysql_db:
        - name: gitlabhq_production
