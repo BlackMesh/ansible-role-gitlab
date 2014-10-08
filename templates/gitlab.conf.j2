@@ -25,7 +25,7 @@
   SSLCipherSuite SSLv3:TLSv1:+HIGH:!SSLv2:!MD5:!MEDIUM:!LOW:!EXP:!ADH:!eNULL:!aNULL
   SSLCertificateFile    /etc/httpd/ssl.crt/{{ gitlab_host }}.crt
   SSLCertificateKeyFile /etc/httpd/ssl.key/{{ gitlab_host }}.key
-  SSLCACertificateFile  /etc/httpd/ssl.crt/your-ca.crt
+  SSLCACertificateFile  /etc/httpd/ssl.crt/{{ gitlab_host }}-ca.crt
 
   ServerName {{ gitlab_host }}
   ServerSignature Off
