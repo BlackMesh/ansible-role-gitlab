@@ -23,9 +23,9 @@
   #strong encryption ciphers only
   #see ciphers(1) http://www.openssl.org/docs/apps/ciphers.html
   SSLCipherSuite SSLv3:TLSv1:+HIGH:!SSLv2:!MD5:!MEDIUM:!LOW:!EXP:!ADH:!eNULL:!aNULL
-  SSLCertificateFile    /etc/httpd/ssl.crt/{{ gitlab_host }}.crt
-  SSLCertificateKeyFile /etc/httpd/ssl.key/{{ gitlab_host }}.key
-  SSLCACertificateFile  /etc/httpd/ssl.crt/{{ gitlab_host }}-ca.crt
+  SSLCertificateFile    {{ certs_destination }}/{{ SSLCertificateFile }}
+  SSLCertificateKeyFile {{ certs_destination }}/{{ SSLCertificateKeyFile }}
+  SSLCACertificateFile  {{ certs_destination }}/{{ SSLCertificateChainFile }}
 
   ServerName {{ gitlab_host }}
   ServerSignature Off
