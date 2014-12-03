@@ -1,5 +1,5 @@
 ---
-gitlab_shell_version: "v1.9.6"
+gitlab_shell_version: "v1.9.8"
 gitlab_branch: "7-2-stable"
 gitlab_repo: https://github.com/gitlabhq/gitlabhq.git
 gitlab_user: git
